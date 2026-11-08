@@ -1,0 +1,63 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Backend API Service (FastAPI + SQLite with Persistent Disk)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: creatoriq-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/v1/health
+    disk:
+      name: creatoriq-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////app/data/creatoriq.db
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_MINUTES
+        value: "60"
+      - key: FRONTEND_URL
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: YOUTUBE_CHANNEL_HANDLE
+        value: GoogleDevelopers
+      - key: RAPIDAPI_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: LINKEDIN_ACCESS_TOKEN
+        sync: false
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+
+  # ----------------------------------------------------------------------------
+  # Frontend SPA Service (Static Site)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: creatoriq-frontend
+    runtime: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    region: oregon
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: creatoriq-backend
+          property: host
